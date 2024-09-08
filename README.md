@@ -16,14 +16,14 @@ An overview of the proposed method, which involves training a model $\mathbf{x}_
 
 To install all packages in this codebase along with their dependencies, run
 ```sh
-conda create -n pid-diffusion python=3.9
-conda activate pid-diffusion
-conda install pytorch=1.13.1 torchvision=0.14.1 pytorch-cuda=11.6 -c pytorch -c nvidia
-conda install -c "nvidia/label/cuda-11.6.1" libcusolver-dev
-conda install mpi4py
+conda create -n pid_diffusion python=3.9
+conda activate pid_diffusion
 git clone https://github.com/pantheon5100/pid_diffusion.git
 cd pid_diffusion
 pip install -e .
+conda install -c "nvidia/label/cuda-11.6.1" libcusolver-dev
+conda install mpi4py
+
 ```
 
 # Get Started
