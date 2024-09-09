@@ -1,9 +1,10 @@
 #########################################################################
 # PID on CIFAR10
 #########################################################################
+module purge
+module load cuda/12.4 ompi/5.0.1-it 
 
-
-OPENAI_LOGDIR=./experiment/pid_cifar10 mpirun -np 8 python cm_train.py \
+OPENAI_LOGDIR=./experiment/pid_cifar10 mpirun -np 3 python cm_train.py \
     --training_mode one_shot_pinn_edm_edm \
     --target_ema_mode fixed \
     --start_ema 0.5 \

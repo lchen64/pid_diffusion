@@ -25,6 +25,12 @@ import copy
 import torch 
 
 def main():
+    
+    print("torch file:")
+    print(torch.__file__)
+    print("CUDA is Available?") 
+    print(torch.cuda.is_available())
+    
     args = create_argparser().parse_args()
 
     dist_util.setup_dist()
@@ -63,7 +69,9 @@ def main():
     else:
         raise ValueError(f"unknown training mode {args.training_mode}")
 
-
+    print("CUDA is Available?") 
+    print(torch.cuda.is_available())
+    
     model.to(dist_util.dev())
     model.train()
 
@@ -127,8 +135,7 @@ def main():
         teacher_diffusion = None
 
     logger.log("training...")
-    print(torch.__file__)
-    print(torch.cuda.is_available())
+
     ODETrainLoop(
         model=model,
         teacher_model=teacher_model,
