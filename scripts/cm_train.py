@@ -127,6 +127,7 @@ def main():
         teacher_diffusion = None
 
     logger.log("training...")
+    print(torch.__file__)
     print(torch.cuda.is_available())
     ODETrainLoop(
         model=model,

@@ -9,7 +9,7 @@ OPENAI_LOGDIR=./experiment/pid_cifar10 mpirun -np 8 python cm_train.py \
     --start_ema 0.5 \
     --scale_mode fixed \
     --start_scales 250 \
-    --total_training_steps 500000 \
+    --total_training_steps 500 \
     --loss_norm lpips \
     --lr_anneal_steps 0 \
     --teacher_model_path model_zoo/edm-cifar10-32x32-uncond-vp.ckpt \
