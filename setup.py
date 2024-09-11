@@ -5,7 +5,7 @@ setup(
     py_modules=["cm", "evaluations"],
     install_requires=[
         "psutil",
-        "blobfile>=1.0.5",
+        "blobfile==3.0.0",
         "clean-fid",
         "tqdm",
         "numpy==1.23.0",

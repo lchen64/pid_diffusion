@@ -55,7 +55,7 @@
 
 
 #########################################################################
-# Image generation for cifar edmedm model
+# Image generation for cifar edm model
 #########################################################################
 
 OPENAI_LOGDIR=./experiment/image_sampling/CIFAREDM mpirun -np 2 python image_sample.py \
@@ -79,7 +79,7 @@ OPENAI_LOGDIR=./experiment/image_sampling/CIFAREDM mpirun -np 2 python image_sam
     --use_fp16 False \
     --use_scale_shift_norm True \
     --weight_schedule uniform
-#########################################################################
+
 
 
 #########################################################################

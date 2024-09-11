@@ -23,13 +23,26 @@ from cm.train_util import ODETrainLoop
 import torch.distributed as dist
 import copy
 import torch 
+import gc
+import os
+
 
 def main():
-    
-    print("torch file:")
+    nlist = list(range(torch.cuda.device_count()))
+    os.environ["CUDA_VISIBLE_DEVICES"] = ','.join([str(i) for i in nlist])
+    os.environ['PYTORCH_CUDA_ALLOC_CONF'] = 'max_split_size_mb:32'
+    print(os.environ['CUDA_VISIBLE_DEVICES'])
+    print("torch file") 
     print(torch.__file__)
     print("CUDA is Available?") 
     print(torch.cuda.is_available())
+
+    gc.collect()
+    torch.cuda.empty_cache()
+    
+    print("torch.cuda.memory_allocated: %fGB"%(torch.cuda.memory_allocated(0)/1024/1024/1024))
+    print("torch.cuda.memory_reserved: %fGB"%(torch.cuda.memory_reserved(0)/1024/1024/1024))
+    print("torch.cuda.max_memory_reserved: %fGB"%(torch.cuda.max_memory_reserved(0)/1024/1024/1024))
     
     args = create_argparser().parse_args()
 
@@ -68,9 +81,6 @@ def main():
 
     else:
         raise ValueError(f"unknown training mode {args.training_mode}")
-
-    print("CUDA is Available?") 
-    print(torch.cuda.is_available())
     
     model.to(dist_util.dev())
     model.train()
@@ -83,6 +93,7 @@ def main():
     schedule_sampler = create_named_schedule_sampler(args.schedule_sampler, diffusion)
 
     if args.batch_size == -1:
+        print("World Size" + str(dist.get_world_size()))
         batch_size = args.global_batch_size // dist.get_world_size()
         if args.global_batch_size % dist.get_world_size() != 0:
             logger.log(

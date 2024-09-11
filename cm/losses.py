@@ -5,7 +5,7 @@ https://github.com/hojonathanho/diffusion/blob/1e0dceb3b3495bbe19116a5e1b3596cd0
 """
 
 import numpy as np
-
+import torch
 import torch as th
 
 
@@ -81,7 +81,7 @@ def get_ECFD_Loss(X, Y, device):
     
     """
     Compute the expected characteristic function distance between two probability
-    distributions, in terms of sines and cosines using Euler's formula.
+    distributions X and Y, in terms of sines and cosines (using Euler's formula).
 
     """
     num_freqs = 8 # Number of frequency t's to sample

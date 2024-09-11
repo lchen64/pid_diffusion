@@ -4,13 +4,15 @@
 module purge
 module load cuda/12.4 ompi/5.0.1-it 
 
-OPENAI_LOGDIR=./experiment/pid_cifar10 mpirun -np 3 python cm_train.py \
+export devices="auto"
+
+OPENAI_LOGDIR=./experiment/pid_cifar10_CUDA python cm_train.py \
     --training_mode one_shot_pinn_edm_edm \
     --target_ema_mode fixed \
     --start_ema 0.5 \
     --scale_mode fixed \
     --start_scales 250 \
-    --total_training_steps 500 \
+    --total_training_steps 8000 \
     --loss_norm lpips \
     --lr_anneal_steps 0 \
     --teacher_model_path model_zoo/edm-cifar10-32x32-uncond-vp.ckpt \
@@ -20,7 +22,7 @@ OPENAI_LOGDIR=./experiment/pid_cifar10 mpirun -np 3 python cm_train.py \
     --dropout 0.0 \
     --teacher_dropout 0.0 \
     --ema_rate 0.999,0.9999,0.99995 \
-    --global_batch_size 64 \
+    --global_batch_size 51 \
     --microbatch -1 \
     --image_size 32 \
     --lr 0.0002 \

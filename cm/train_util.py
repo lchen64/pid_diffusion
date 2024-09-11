@@ -95,7 +95,7 @@ class TrainLoop:
         )
 
         training_params = self.mp_trainer.master_params
-        print(th.__path__)
+        
         if optimizer == 'radam':
             logger.log(f"use optimizer RAdam, lr: {self.lr}, weight_decay: {self.weight_decay}, eps: {opt_eps}")
             self.opt = RAdam(
@@ -109,6 +109,7 @@ class TrainLoop:
         else:
             raise ValueError(f"Unsport optimizer {optimizer}")
         
+        print("Is CUDA Available?") 
         print(th.cuda.is_available())
         
         if self.resume_step:
@@ -135,7 +136,6 @@ class TrainLoop:
                 bucket_cap_mb=128,
                 find_unused_parameters=False,
             )
-
         else:
             if dist.get_world_size() > 1:
                 logger.warn(
@@ -159,7 +159,7 @@ class TrainLoop:
             #     logger.log(f"Fail to save the code. {err}")
             #     logger.log(f"Continue without saving the code...")
         '''        
-        logger.log(f"Continue without saving the code...")     
+        logger.log(f"Continuing without saving code")     
 
     def _load_and_sync_parameters(self):
         resume_checkpoint = find_resume_checkpoint() or self.resume_checkpoint

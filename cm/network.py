@@ -137,7 +137,7 @@ class GroupNorm(torch.nn.Module):
     def forward(self, x):
         x = torch.nn.functional.group_norm(x, num_groups=self.num_groups, weight=self.weight.to(x.dtype), bias=self.bias.to(x.dtype), eps=self.eps)
         return x
-
+ 
 #----------------------------------------------------------------------------
 # Attention weight computation, i.e., softmax(Q^T * K).
 # Performs all computation using FP32, but uses the original datatype for
