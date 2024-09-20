@@ -5,6 +5,7 @@ import random
 
 import numpy as np
 import torch as th
+import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from piq import LPIPS
@@ -12,10 +13,21 @@ from torchvision.transforms import RandomCrop
 from . import dist_util
 
 from .nn import mean_flat, append_dims, append_zero
+from .losses import *
 from .random_util import get_generator
 import math
 import torch.autograd.forward_ad as fwAD
 from . import logger
+import cv2 as cv 
+
+#Apply Gaussian Smoothing to Image
+def smooth_img(img, kernel_size):
+    blurred = cv.GaussianBlur(img, kernel_size, 0)
+    return blurred
+# relative weight of PID loss vs ECFD Loss
+pid_weight = .7
+# Smoothing Kernel Size for Gaussian Smoothing of Teacher Diffusion Images
+kernel_size = 11
 
 class OneShotDenoiser:
     def __init__(
@@ -41,7 +53,7 @@ class OneShotDenoiser:
             self.lpips_loss = LPIPS(replace_pooling=True, reduction="none")
         self.rho = rho
         self.num_timesteps = 40
-
+    
     def get_snr(self, sigmas):
         return sigmas**-2
 
@@ -174,8 +186,20 @@ class OneShotDenoiser:
         pred_x = teacher_denoise_fn(y_hat, t)
         target = y_hat - dydx*append_dims(t, dims)
         
+        pred_x = pred_x.cpu().numpy()
+        print(pred_x.shape)
+        pred_x = np.transpose(pred_x, (0,2,3,1))
+        print(pred_x.shape)
+        
+        #Gaussian Smooth Images in Batch
+        for img in pred_x:
+            img = smooth_img((img), (kernel_size, kernel_size))
+
+        pred_x = np.transpose(pred_x, (0,3,1,2))
+        print(pred_x.shape)
+        
         distiller = target
-        distiller_target = pred_x
+        distiller_target = th.from_numpy(pred_x).to(device='cuda')
 
 
 
@@ -205,9 +229,19 @@ class OneShotDenoiser:
 
         else:
             raise ValueError(f"Unknown loss norm {self.loss_norm}")
-
+        
+        
+        PID_loss = loss 
+        print(PID_loss)
+        ecfd_loss = gaussian_ecfd(distiller, distiller_target, sigmas = [1.0], optimize_sigma=True)
+        print(ecfd_loss)
+        
+        #compute PID Loss Weighted with ECFD Loss
+        loss = (1-pid_weight) * ecfd_loss + pid_weight * PID_loss
+        print(loss)
+        
+        
         loss_dict["loss"] = loss
-
         return loss_dict
 
     def get_scalings(self, sigma):
@@ -529,6 +563,7 @@ class KarrasDenoiser:
         if self.loss_norm == "l1":
             diffs = th.abs(distiller - distiller_target)
             loss = mean_flat(diffs) * weights
+        
         elif self.loss_norm == "l2":
             diffs = (distiller - distiller_target) ** 2
             loss = mean_flat(diffs) * weights
@@ -540,14 +575,14 @@ class KarrasDenoiser:
                 mode="bilinear",
             )
             diffs = (distiller - distiller_target) ** 2
-            loss = mean_flat(diffs) * weights
+            loss = mean_flat(diffs) * weights 
+            
         elif self.loss_norm == "lpips":
             if x_start.shape[-1] < 256:
                 distiller = F.interpolate(distiller, size=224, mode="bilinear")
                 distiller_target = F.interpolate(
                     distiller_target, size=224, mode="bilinear"
                 )
-
             loss = (
                 self.lpips_loss(
                     (distiller + 1) / 2.0,
@@ -557,7 +592,7 @@ class KarrasDenoiser:
             )
         else:
             raise ValueError(f"Unknown loss norm {self.loss_norm}")
-
+        
         terms = {}
         terms["loss"] = loss
 

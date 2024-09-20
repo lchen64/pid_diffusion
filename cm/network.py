@@ -340,6 +340,7 @@ class DhariwalUNet(torch.nn.Module):
         resblock_updown=False,
         use_new_attention_order=False,
         ):
+        
 
         # img_resolution,                     # Image resolution at input/output.
         # in_channels,                        # Number of color channels at input.

@@ -5,7 +5,6 @@ https://github.com/hojonathanho/diffusion/blob/1e0dceb3b3495bbe19116a5e1b3596cd0
 """
 
 import numpy as np
-import torch
 import torch as th
 
 
@@ -77,26 +76,87 @@ def discretized_gaussian_log_likelihood(x, *, means, log_scales):
     return log_probs
 
 
-def get_ECFD_Loss(X, Y, device):
+def gaussian_ecfd(X, Y, sigmas, num_freqs=8, optimize_sigma=False):
+    """Computes ECFD with Gaussian weighting distribution.
     
-    """
-    Compute the expected characteristic function distance between two probability
-    distributions X and Y, in terms of sines and cosines (using Euler's formula).
+    Arguments:
+        X {torch.Tensor} -- Samples from distribution P of shape [B x D].
+        Y {torch.Tensor} -- Samples from distribution Q of shape [B x D].
+        sigmas {list} or {torch.Tensor} -- A list of floats or a torch Tensor of
+                                           shape [1 x D] if optimize_sigma is True.
+    
+    Keyword Arguments:
+        num_freqs {int} -- Number of random frequencies to use (default: {8}).
+        optimize_sigma {bool} -- Whether to optimize sigma (default: {False}).
+    
+    Returns:
+        torch.Tensor -- The ECFD.
+    """    
+    total_loss = 0.0
+    if not optimize_sigma:
+        for sigma in sigmas:
+            batch_loss = _gaussian_ecfd(X, Y, sigma, num_freqs=num_freqs)
+            total_loss += batch_loss
+    else:
+        batch_loss = _gaussian_ecfd(X, Y, sigmas, num_freqs=num_freqs)
+        total_loss += batch_loss / torch.norm(sigmas, p=2)
+    return total_loss
 
-    """
-    num_freqs = 8 # Number of frequency t's to sample
-    sigma = 1.0 # Gaussian Distribution sigma to use for sampling t's
+def _gaussian_ecfd(X, Y, sigma, num_freqs=8):
+    wX, wY = 1.0, 1.0
+    X, Y = X.view(X.size(0), -1), Y.view(Y.size(0), -1)
+    batch_size, dim = X.size()
+    t = th.randn((num_freqs, dim)).cuda() * sigma
+    X_reshaped = X.view((batch_size, dim))
+    tX = th.matmul(t, X_reshaped.t())
+    cos_tX = (th.cos(tX) * wX).mean(1)
+    sin_tX = (th.sin(tX) * wX).mean(1)
+    Y_reshaped = Y.view((batch_size, dim))
+    tY = th.matmul(t, Y_reshaped.t())
+    cos_tY = (th.cos(tY) * wY).mean(1)
+    sin_tY = (th.sin(tY) * wY).mean(1)
+    loss = (cos_tX - cos_tY) ** 2 + (sin_tX - sin_tY) ** 2
+    return loss.mean()
 
-    t = torch.randn((num_freqs, X.size(-1)), dtype=torch.float).to(device) * sigma
 
-    tX = torch.matmul(t, X.T)
-    tY = torch.matmul(t, Y.T)
+def uniform_ecfd(X, Y, sigmas, num_freqs=8, optimize_sigma=False):
+    """Computes ECFD with Uniform weighting distribution [-sigma, sigma].
+    
+    Arguments:
+        X {torch.Tensor} -- Samples from distribution P of shape [B x D].
+        Y {torch.Tensor} -- Samples from distribution Q of shape [B x D].
+        sigmas {list} or {torch.Tensor} -- A list of floats or a torch Tensor of
+                                           shape [1 x D] if optimize_sigma is True.
+    
+    Keyword Arguments:
+        num_freqs {int} -- Number of random frequencies to use (default: {8}).
+        optimize_sigma {bool} -- Whether to optimize sigma (default: {False}).
+    
+    Returns:
+        torch.Tensor -- The ECFD.
+    """  
+    total_loss = 0.0
+    if not optimize_sigma:
+        for sigma in sigmas:
+            batch_loss = _uniform_ecfd(X, Y, sigma, num_freqs=num_freqs)
+            total_loss += batch_loss
+    else:
+        batch_loss = _uniform_ecfd(X, Y, sigmas, num_freqs=num_freqs)
+        total_loss += batch_loss / torch.norm(sigmas, p=2)
+    return total_loss
 
-    cos_tX = (torch.cos(tX)).mean(1)
-    sin_tX = (torch.sin(tX)).mean(1)
-    cos_tY = (torch.cos(tY)).mean(1)
-    sin_tY = (torch.sin(tY)).mean(1)
 
-    loss = (cos_tX - cos_tY)**2 + (sin_tX - sin_tY)**2
-
+def _uniform_ecfd(X, Y, sigma, num_freqs=8):
+    X, Y = X.view(X.size(0), -1), Y.view(Y.size(0), -1)
+    batch_size, dim = X.size()
+    t = (2 * torch.rand((num_freqs, dim)).cuda() - 1.0) * sigma
+    X_reshaped = X.view((batch_size, dim))
+    tX = torch.matmul(t, X_reshaped.t())
+    cos_tX = torch.cos(tX).mean(1)
+    sin_tX = torch.sin(tX).mean(1)
+    Y_reshaped = Y.view((batch_size, dim))
+    tY = torch.matmul(t, Y_reshaped.t())
+    cos_tY = torch.cos(tY).mean(1)
+    sin_tY = torch.sin(tY).mean(1)
+    loss = (cos_tX - cos_tY) ** 2 + (sin_tX - sin_tY) ** 2
     return loss.mean()

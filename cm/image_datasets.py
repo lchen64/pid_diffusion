@@ -6,6 +6,7 @@ import blobfile as bf
 from mpi4py import MPI
 import numpy as np
 from torch.utils.data import DataLoader, Dataset
+import cv2 as cv 
 
 
 def load_data(
@@ -109,6 +110,7 @@ class ImageDataset(Dataset):
 
         if self.random_crop:
             arr = random_crop_arr(pil_image, self.resolution)
+
         else:
             arr = center_crop_arr(pil_image, self.resolution)
 
@@ -116,7 +118,10 @@ class ImageDataset(Dataset):
             arr = arr[:, ::-1]
 
         arr = arr.astype(np.float32) / 127.5 - 1
-
+        
+        #Smooth Each Image in Batch With Gaussian Filter to Avoid Noisy Gradients
+        arr = smooth_img(arr)
+        
         out_dict = {}
         if self.local_classes is not None:
             out_dict["y"] = np.array(self.local_classes[idx], dtype=np.int64)
