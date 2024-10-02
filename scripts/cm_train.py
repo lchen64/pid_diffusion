@@ -8,7 +8,6 @@ import sys
 sys.path.append("..")
 
 from cm import dist_util, logger
-from cm.image_datasets import load_data
 from cm.resample import create_named_schedule_sampler
 from cm.script_util import (
     model_and_diffusion_defaults,
@@ -101,7 +100,6 @@ def main():
             )
     else:
         batch_size = args.batch_size
-    # batch_size = 2048 which is the batch_size for each gpu
 
     data = None
 
@@ -146,7 +144,7 @@ def main():
         teacher_diffusion = None
 
     logger.log("training...")
-
+    
     ODETrainLoop(
         model=model,
         teacher_model=teacher_model,

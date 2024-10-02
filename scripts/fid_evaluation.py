@@ -187,7 +187,7 @@ def main(args, model=None, diffusion=None):
     if args.class_cond:
         label_arr = np.concatenate(all_labels, axis=0)
         label_arr = label_arr[: args.num_samples]
-    fid_score = 0.
+    fid_score = 0
     if dist.get_rank() == 0:
         
         shape_str = "x".join([str(x) for x in arr.shape])
@@ -205,7 +205,6 @@ def main(args, model=None, diffusion=None):
             ref_mu, 
             ref_sigma
             )
-
     dist.barrier()
     logger.log("sampling complete")
     return fid_score
@@ -282,9 +281,8 @@ if __name__ == "__main__":
         fid_score = main(args)
         
         logger.log(f"\nmodel: {args.model_name} \nFID {fid_score:.4f}\n")
-        
-        if dist.get_rank() == 0:
-            with open(str(result_file), mode='a') as f:
-                fid_writer = csv.writer(f, delimiter=',')
-                fid_writer.writerow([args.model_name, fid_score])
+       
+        with open(str(result_file), mode='a') as f:
+            fid_writer = csv.writer(f, delimiter=',')
+            fid_writer.writerow([args.model_name, fid_score])
 

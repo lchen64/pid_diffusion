@@ -19,7 +19,7 @@ def cm_train_defaults():
         start_scales=40,
         end_scales=40,
         distill_steps_per_iter=50000,
-        loss_norm="lpips",
+        loss_norm="lpips",  
     )
 
 

@@ -25,9 +25,11 @@ def smooth_img(img, kernel_size):
     blurred = cv.GaussianBlur(img, kernel_size, 0)
     return blurred
 # relative weight of PID loss vs ECFD Loss
-pid_weight = .7
+pid_weight = .5
 # Smoothing Kernel Size for Gaussian Smoothing of Teacher Diffusion Images
 kernel_size = 11
+# Smooth Images from Teacher Diffusion Model for PID Training
+smooth = True
 
 class OneShotDenoiser:
     def __init__(
@@ -190,18 +192,17 @@ class OneShotDenoiser:
         print(pred_x.shape)
         pred_x = np.transpose(pred_x, (0,2,3,1))
         print(pred_x.shape)
-        
-        #Gaussian Smooth Images in Batch
-        for img in pred_x:
-            img = smooth_img((img), (kernel_size, kernel_size))
+        if smooth:
+            #Gaussian Smooth Images in Batch
+            for img in pred_x:
+                img = smooth_img((img), (kernel_size, kernel_size))
 
         pred_x = np.transpose(pred_x, (0,3,1,2))
         print(pred_x.shape)
         
         distiller = target
         distiller_target = th.from_numpy(pred_x).to(device='cuda')
-
-
+        
 
         snrs = self.get_snr(t)
         weights = get_weightings(self.weight_schedule, snrs, self.sigma_data)
@@ -218,7 +219,6 @@ class OneShotDenoiser:
                 distiller_target = F.interpolate(
                     distiller_target, size=224, mode="bilinear"
                 )
-
             loss = (
                 self.lpips_loss(
                     (distiller + 1) / 2.0,
@@ -231,14 +231,17 @@ class OneShotDenoiser:
             raise ValueError(f"Unknown loss norm {self.loss_norm}")
         
         
-        PID_loss = loss 
-        print(PID_loss)
-        ecfd_loss = gaussian_ecfd(distiller, distiller_target, sigmas = [1.0], optimize_sigma=True)
+        PID_Loss = loss 
+        print(PID_Loss)
+        #compute ECFD Loss
+        ecfd_loss = weights * gaussian_ecfd(distiller, distiller_target, sigmas = [1.0])
+        print("ECFD Loss Computed")
         print(ecfd_loss)
         
+        
         #compute PID Loss Weighted with ECFD Loss
-        loss = (1-pid_weight) * ecfd_loss + pid_weight * PID_loss
-        print(loss)
+        loss = (1-pid_weight) * ecfd_loss + pid_weight * PID_Loss
+        print("Total Loss Computed")
         
         
         loss_dict["loss"] = loss

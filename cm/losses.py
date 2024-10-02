@@ -99,14 +99,14 @@ def gaussian_ecfd(X, Y, sigmas, num_freqs=8, optimize_sigma=False):
             total_loss += batch_loss
     else:
         batch_loss = _gaussian_ecfd(X, Y, sigmas, num_freqs=num_freqs)
-        total_loss += batch_loss / torch.norm(sigmas, p=2)
+        total_loss += batch_loss / th.norm(sigmas, p=2)
     return total_loss
 
 def _gaussian_ecfd(X, Y, sigma, num_freqs=8):
     wX, wY = 1.0, 1.0
     X, Y = X.view(X.size(0), -1), Y.view(Y.size(0), -1)
     batch_size, dim = X.size()
-    t = th.randn((num_freqs, dim)).cuda() * sigma
+    t = (th.randn((num_freqs, dim)).cuda()).to(dtype=th.long, device='cuda') * sigma
     X_reshaped = X.view((batch_size, dim))
     tX = th.matmul(t, X_reshaped.t())
     cos_tX = (th.cos(tX) * wX).mean(1)

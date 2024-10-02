@@ -10,11 +10,13 @@ import numpy as np
 import torch as th
 import torch.distributed as dist
 
+import sys
+sys.path.append("..")
+
 from cm import dist_util, logger
 from cm.script_util import (
     NUM_CLASSES,
     model_and_diffusion_defaults,
-    create_model_and_diffusion,
     add_dict_to_argparser,
     args_to_dict,
     create_one_shot_edmedm_model_and_diffusion,
@@ -23,8 +25,18 @@ from cm.random_util import get_generator
 from cm.karras_diffusion import karras_sample
 import copy
 import torchvision
+import gc
+import torch 
 
 def main():
+
+    gc.collect()
+    torch.cuda.empty_cache()
+    
+    print("torch.cuda.memory_allocated: %fGB"%(torch.cuda.memory_allocated(0)/1024/1024/1024))
+    print("torch.cuda.memory_reserved: %fGB"%(torch.cuda.memory_reserved(0)/1024/1024/1024))
+    print("torch.cuda.max_memory_reserved: %fGB"%(torch.cuda.max_memory_reserved(0)/1024/1024/1024))
+    
     args = create_argparser().parse_args()
 
     dist_util.setup_dist()
@@ -67,6 +79,7 @@ def main():
     model.eval()
 
     logger.log("sampling...")
+    
     if args.sampler == "multistep":
         assert len(args.ts) > 0
         ts = tuple(int(x) for x in args.ts.split(","))
@@ -118,7 +131,7 @@ def main():
             all_labels.extend([labels.cpu().numpy() for labels in gathered_labels])
         logger.log(f"created {len(all_images) * args.batch_size} samples")
         
-        if len(all_images) <= args.batch_size and dist.get_rank() == 0:
+        if len(all_images) <= args.batch_size: #and dist.get_rank() == 0:
             torchvision.utils.save_image((sample_ori + 1.)/2., os.path.join(logger.get_dir(), f"samples_first_batch.png"))
             
     arr = np.concatenate(all_images, axis=0)
@@ -129,6 +142,7 @@ def main():
     if dist.get_rank() == 0:
         shape_str = "x".join([str(x) for x in arr.shape])
         out_path = os.path.join(logger.get_dir(), f"samples_{shape_str}.npz")
+        print(out_path)
         logger.log(f"saving to {out_path}")
             
         if args.class_cond:
